@@ -4,6 +4,7 @@ import { useId } from '$store/sdk/useId.ts'
 
 export type TabsProps = JSX.HTMLAttributes<HTMLDivElement> & {
     tabOpenIndex?: number
+    vertical?: boolean
 }
 export type TabProps = JSX.HTMLAttributes<HTMLButtonElement>
 export type TabPanelProps = JSX.HTMLAttributes<HTMLButtonElement>
@@ -15,7 +16,7 @@ export type TabListProps = JSX.HTMLAttributes<HTMLDivElement> & {
 }
 
 export function TabPanel({ ...props }: TabPanelProps) {
-    return <button type='button' {...props} data-tab-panel tabIndex={0} />
+    return <button type='button' {...props} data-tab-panel tabIndex={0} style={{ display: 'none' }} />
 }
 
 export const TabsList = ({ children, explain, ...props }: TabListProps) => {
@@ -35,13 +36,13 @@ export function Tab({ id, children, ...props }: TabProps) {
     )
 }
 
-export default function Tabs({ tabOpenIndex = 0, id: _id, ...props }: TabsProps) {
+export default function Tabs({ tabOpenIndex, id: _id, vertical, ...props }: TabsProps) {
     const id = _id ?? useId()
 
     return (
         <>
             <div id={id} {...props} />
-            <TabsJS tabOpenIndex={tabOpenIndex} id={id as string} />
+            <TabsJS tabOpenIndex={tabOpenIndex} id={id as string} vertical={vertical} />
         </>
     )
 }

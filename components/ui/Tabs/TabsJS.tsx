@@ -4,62 +4,43 @@ import { useSignal } from '@preact/signals'
 import { useEffect } from 'preact/hooks'
 
 type Props = {
-	tabOpenIndex: number
 	id: string
+	tabOpenIndex?: number
+	vertical?: boolean
 }
 
-export default function ({ tabOpenIndex = 0, id, ...props }: Props) {
+export default function ({ tabOpenIndex = 0, id, vertical }: Props) {
 	const focus = useSignal(tabOpenIndex)
 
 	useEffect(() => {
 		const root = document.getElementById(id) as HTMLDivElement
 
-		if (root === null) return
+		if (root === null) throw new Error(`Root (${id}) not found`)
 
 		const panels = root.querySelectorAll<HTMLDivElement>('[data-tab-panel]')
-		const list = root.querySelector<HTMLUListElement>('[data-tab-list]')
 		const tabs = root.querySelectorAll<HTMLButtonElement>('[data-tab]')
 
-		function handleOnChange(i: number) {
-			focus.value = i
-			update()
-		}
-
 		update()
-		for (const [i, tab] of tabs.entries()) {
-			tab.addEventListener('keydown', handleKeyboard)
-			tab.addEventListener('click', () => handleOnChange(i))
-		}
 
 		function handleKeyboard(e: KeyboardEvent) {
-			const tablist = (e.currentTarget as HTMLLabelElement).closest(
-				'[data-tab-list]',
-			)
-			if (tablist === null) return
-
-			const lastIndex = tabs.length - 1
-
-			switch (e.code) {
-				case 'ArrowLeft':
-					if (focus.value === 0) focus.value = lastIndex
-					else focus.value -= 1
-
-					break
-				case 'ArrowRight':
-					if (focus.value === lastIndex) focus.value = 0
-					else focus.value += 1
-
-					break
-				case 'End':
-					focus.value = lastIndex
-
-					break
-				case 'Home':
-					e.preventDefault()
-					focus.value = 0
-
-					break
+			function next() {
+				focus.value = (focus.value + 1) % tabs.length
 			}
+
+			function prev() {
+				focus.value = (focus.value - 1 + tabs.length) % tabs.length
+			}
+
+			if (vertical) {
+				if (e.code === 'ArrowUp') prev()
+				if (e.code === 'ArrowDown') next()
+			} else {
+				if (e.code === 'ArrowLeft') prev()
+				if (e.code === 'ArrowRight') next()
+			}
+
+			if (e.code === 'Home') focus.value = 0
+			if (e.code === 'End') focus.value = tabs.length - 1
 
 			update()
 		}
@@ -80,7 +61,9 @@ export default function ({ tabOpenIndex = 0, id, ...props }: Props) {
 			}
 
 			for (const [i, panel] of panels.entries()) {
-				if (i === focus.value) {
+				const isFocused = i === focus.value
+
+				if (isFocused) {
 					panel.setAttribute('aria-hidden', 'false')
 					panel.style.display = 'block'
 					panel.dataset.selected = 'true'
@@ -100,6 +83,23 @@ export default function ({ tabOpenIndex = 0, id, ...props }: Props) {
 			panels[i].id = `tab-panel-${id}-${i}`
 			panels[i].setAttribute('aria-labelledby', `tab-${id}-${i}`)
 			tabs[i].setAttribute('aria-controls', `tab-panel-${id}-${i}`)
+		}
+
+		function handleOnChange(i: number) {
+			focus.value = i
+			update()
+		}
+
+		for (const [i, tab] of tabs.entries()) {
+			tab.addEventListener('keydown', handleKeyboard)
+			tab.addEventListener('click', () => handleOnChange(i))
+		}
+
+		return () => {
+			for (const [i, tab] of tabs.entries()) {
+				tab.removeEventListener('keydown', handleKeyboard)
+				tab.removeEventListener('click', () => handleOnChange(i))
+			}
 		}
 	}, [])
 
