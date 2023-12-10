@@ -27,9 +27,6 @@
       "security": {
         "noDangerouslySetInnerHtml": "off"
       },
-      "style": {
-        "noNonNullAssertion": "warn"
-      },
       "suspicious": {
         "noExplicitAny": "warn"
       }
