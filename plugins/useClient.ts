@@ -1,35 +1,49 @@
-import { readline } from 'https://deno.land/x/readline@v1.1.0/mod.ts'
-import { expandGlob } from 'std/fs/expand_glob.ts'
 import { Plugin } from '$fresh/server.ts'
+import { expandGlob } from 'std/fs/expand_glob.ts'
 import { toFileUrl } from 'std/path/to_file_url.ts'
+import { yellow } from 'std/fmt/colors.ts'
 
 const islands = new Set<string>()
 const decoder = new TextDecoder()
 const exclude = JSON.parse(await Deno.readTextFile('deno.json')).exclude
 
-for await (const file of expandGlob('**/*.tsx', {
-    exclude: exclude ?? [],
-})) {
-    if (!file.isFile) throw new Error(`${file.path} is not a file`)
+const start = performance.now()
 
-    const f = await Deno.open(file.path)
-    for await (const line of readline(f)) {
-        if (decoder.decode(line).match(/['"]use client['"]/)) {
-            islands.add(toFileUrl(file.path).href)
-        }
+for await (
+	const file of expandGlob('**/*.tsx', {
+		exclude: exclude ?? [],
+	})
+) {
+	if (!file.isFile) throw new Error(`${file.path} is not a file`)
 
-        break
-    }
+	const f = await Deno.open(file.path)
 
-    f.close()
+	const buf = new Uint8Array(20)
+	await f.read(buf)
+
+	if (decoder.decode(buf).match(/['"]use client['"]/)) {
+		islands.add(toFileUrl(file.path).href)
+	}
+
+	f.close()
 }
 
+console.log(
+	yellow(
+		`\u26A1 Found ${islands.size} islands in ${
+			Math.floor(
+				performance.now() - start,
+			)
+		}ms`,
+	),
+)
+
 export default function (): Plugin {
-    return {
-        name: 'useClient',
-        islands: {
-            baseLocation: '',
-            paths: [...islands],
-        },
-    }
+	return {
+		name: 'useClient',
+		islands: {
+			baseLocation: '',
+			paths: [...islands],
+		},
+	}
 }
